@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<title>Lucid 出金計算器</title>
+<style>
+  :root{
+    --bg:#0d1117; --surface:#161b22; --surface2:#1c2433; --surface3:#222c3c;
+    --border:#2a3444; --border2:#39455a;
+    --text:#e6edf3; --dim:#8b97a7; --dim2:#5d6b7d;
+    --accent:#2f81f7; --pro:#7c8cff; --flex:#2dd4bf;
+    --green:#3fb950; --green-bg:rgba(63,185,80,.14);
+    --red:#f85149; --red-bg:rgba(248,81,73,.14);
+    --amber:#d29922; --amber-bg:rgba(210,153,34,.14);
+    --r:14px; --r2:10px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Segoe UI","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{padding:16px 14px 40px;max-width:540px;margin:0 auto;line-height:1.5}
+
+  .head{display:flex;flex-direction:column;gap:4px;margin:4px 2px 16px}
+  .head h1{font-size:21px;font-weight:700;letter-spacing:.3px}
+  .head p{font-size:13px;color:var(--dim)}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+    padding:16px;margin-bottom:14px}
+  .card-t{font-size:12px;font-weight:600;color:var(--dim);letter-spacing:1px;
+    text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+  .card-t .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  .seg{display:flex;background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--r2);padding:4px;gap:4px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--dim);
+    font-size:14px;font-weight:600;padding:11px 8px;border-radius:7px;cursor:pointer;
+    transition:.15s;font-family:inherit}
+  .seg button .sub{display:block;font-size:11px;font-weight:400;opacity:.8;margin-top:2px}
+  .seg button.on{color:#fff}
+  .seg.mode button.on[data-v="PRO"]{background:linear-gradient(0deg,#5b67d8,#7c8cff)}
+  .seg.mode button.on[data-v="FLEX"]{background:linear-gradient(0deg,#14b8a6,#2dd4bf);color:#062b27}
+  .seg.stage button.on{background:var(--surface3);color:#fff;box-shadow:inset 0 0 0 1px var(--border2)}
+
+  .chips{display:flex;gap:8px}
+  .chips button{flex:1;border:1px solid var(--border);background:var(--surface2);
+    color:var(--dim);font-size:14px;font-weight:700;padding:13px 4px;border-radius:10px;
+    cursor:pointer;font-family:inherit;transition:.15s}
+  .chips button.on{border-color:var(--accent);color:#fff;background:rgba(47,129,247,.16)}
+
+  .acct-info{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .acct-info .pill{flex:1;min-width:96px;background:var(--surface2);border:1px solid var(--border);
+    border-radius:9px;padding:9px 10px}
+  .acct-info .pill .k{font-size:10.5px;color:var(--dim2);margin-bottom:3px}
+  .acct-info .pill .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+
+  .row{display:flex;align-items:center;justify-content:space-between;
+    padding:13px 0;border-top:1px solid var(--border)}
+  .row:first-child{border-top:0}
+  .row .lbl{display:flex;flex-direction:column;gap:2px}
+  .row .lbl b{font-size:15px;font-weight:600}
+  .row .lbl span{font-size:11px;color:var(--dim2)}
+  .row .lbl span.off{color:var(--accent)}
+  .stepper{display:flex;align-items:center;background:var(--surface2);
+    border:1px solid var(--border);border-radius:11px;overflow:hidden;flex-shrink:0}
+  .stepper button{width:42px;height:42px;border:0;background:transparent;color:var(--text);
+    font-size:22px;font-weight:300;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font-family:inherit;transition:.1s;user-select:none}
+  .stepper button:active{background:var(--surface3)}
+  .stepper .val{min-width:74px;text-align:center;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums}
+  .stepper .val small{font-size:11px;color:var(--dim);font-weight:400}
+  .stepper input.vin{width:90px;text-align:center;font-size:16px;font-weight:700;
+    background:transparent;border:0;color:var(--text);font-family:inherit;
+    font-variant-numeric:tabular-nums;-moz-appearance:textfield;padding:0}
+  .stepper input.vin::-webkit-outer-spin-button,
+  .stepper input.vin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .stepper input.vin:focus{outline:none;background:rgba(47,129,247,.12)}
+  .row.dim{opacity:.4;pointer-events:none}
+
+  .net{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .net .big{font-size:34px;font-weight:800;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+  .net .formula{font-size:12px;color:var(--dim);text-align:right;line-height:1.7;
+    font-variant-numeric:tabular-nums}
+  .net .formula b{color:var(--text);font-weight:600}
+  .net-tag{font-size:11px;color:var(--dim2);margin-top:10px;line-height:1.5}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);
+    padding:13px 14px}
+  .stat .k{font-size:11px;color:var(--dim);margin-bottom:6px}
+  .stat .v{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat .u{font-size:11px;color:var(--dim2);margin-top:3px}
+  .stat.hl{background:linear-gradient(160deg,rgba(47,129,247,.16),var(--surface2));
+    border-color:rgba(47,129,247,.4)}
+  .stat.hl .v{color:#7eb6ff}
+  .stat.pay{background:linear-gradient(160deg,var(--green-bg),var(--surface2));
+    border-color:rgba(63,185,80,.4)}
+  .stat.pay .v{color:var(--green)}
+  .stat.warn{background:linear-gradient(160deg,var(--red-bg),var(--surface2));
+    border-color:rgba(248,81,73,.4)}
+  .stat.warn .v{color:var(--red)}
+  .stat.cap .v{color:var(--amber)}
+  .span2{grid-column:span 2}
+  .note{font-size:11.5px;color:var(--amber);margin-top:10px;display:flex;gap:6px;
+    align-items:flex-start;line-height:1.5}
+
+  .simhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .reset{border:1px solid var(--border);background:var(--surface2);color:var(--dim);
+    font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;
+    font-family:inherit}
+  .reset:active{background:var(--surface3)}
+  .day{padding:11px 0;border-top:1px solid var(--border)}
+  .day-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .day-name{font-size:13px;font-weight:600;width:42px;flex-shrink:0;color:var(--dim)}
+  .day-step{display:flex;align-items:center;background:var(--surface2);
+    border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-left:auto}
+  .day-step button{width:34px;height:34px;border:0;background:transparent;color:var(--text);
+    font-size:18px;cursor:pointer;font-family:inherit}
+  .day-step button:active{background:var(--surface3)}
+  .day-step .dv{min-width:62px;text-align:center;font-size:14px;font-weight:700;
+    font-variant-numeric:tabular-nums}
+  .day-bar{position:relative;height:9px;background:var(--surface3);border-radius:5px;overflow:hidden}
+  .day-bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transition:.2s}
+  .day-bar .fill.ok{background:var(--green)}
+  .day-bar .fill.over{background:var(--red)}
+  .day-bar .cap{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--amber);opacity:.9}
+  .day-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:11px}
+  .day-meta .pct{font-weight:700;font-variant-numeric:tabular-nums}
+  .day-meta .pct.ok{color:var(--green)} .day-meta .pct.over{color:var(--red)}
+  .day-meta .tag{color:var(--dim2)}
+  .day-meta .tag.warn{color:var(--amber)}
+
+  .total{margin-top:14px;padding-top:14px;border-top:1px solid var(--border2);
+    display:flex;align-items:center;justify-content:space-between}
+  .total .l{font-size:13px;color:var(--dim)}
+  .total .r{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;
+    padding:5px 11px;border-radius:20px;margin-top:10px}
+  .badge.ok{background:var(--green-bg);color:var(--green)}
+  .badge.no{background:var(--red-bg);color:var(--red)}
+
+  details{margin-top:6px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--r);padding:0 16px}
+  summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dim);padding:14px 0;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"＋ ";color:var(--accent)}
+  details[open] summary::before{content:"－ "}
+  details .body{font-size:12.5px;color:var(--dim);line-height:1.85;padding-bottom:16px}
+  details .body b{color:var(--text)}
+  details .body table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+  details .body th,details .body td{border:1px solid var(--border);padding:5px 7px;text-align:center}
+  details .body th{background:var(--surface2);color:var(--text)}
+  .foot{text-align:center;font-size:11px;color:var(--dim2);margin-top:18px;line-height:1.7}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Lucid 出金計算器</h1>
+    <p>LucidPro 一致性 × LucidFlex 50% 雙模式出金規劃</p>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>帳戶模式</div>
+    <div class="seg mode" id="mode">
+      <button data-v="PRO" class="on">PRO 模式<span class="sub">一致性 % 限單日</span></button>
+      <button data-v="FLEX">FLEX 模式<span class="sub">利潤 50% 可單天打完</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>帳戶規模（Lucid 官方）</div>
+    <div class="chips" id="sizeChips">
+      <button data-s="25000">25K</button>
+      <button data-s="50000" class="on">50K</button>
+      <button data-s="100000">100K</button>
+      <button data-s="150000">150K</button>
+    </div>
+    <div class="acct-info" id="acctInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>參數設定</div>
+    <div class="row">
+      <div class="lbl"><b>MLL 安全水位</b><span class="off" id="mll-hint"></span></div>
+      <div class="stepper" data-key="buffer" data-step="100">
+        <button data-act="dec">−</button>
+        <div class="val" id="v-buffer"></div>
+        <button data-act="inc">＋</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="lbl"><b>想出金額</b><span>單筆 ≥ 500，可直接輸入</span></div>
+      <div class="stepper" data-key="withdraw" data-step="100">
+        <button data-act="dec">−</button>
+        <input class="vin" id="in-withdraw" type="number" inputmode="numeric" min="500" step="100">
+        <button data-act="inc">＋</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="lbl"><b>達標天數</b><span>分幾天賺到</span></div>
+      <div class="stepper" data-key="days" data-step="1">
+        <button data-act="dec">−</button>
+        <div class="val" id="v-days"></div>
+        <button data-act="inc">＋</button>
+      </div>
+    </div>
+    <div class="row" id="row-consistency">
+      <div class="lbl"><b>一致性 %</b><span>單日獲利上限佔比</span></div>
+      <div class="stepper" data-key="consistency" data-step="5">
+        <button data-act="dec">−</button>
+        <div class="val" id="v-consistency"></div>
+        <button data-act="inc">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>出金階段</div>
+    <div class="seg stage" id="stage">
+      <button data-v="first" class="on">第一次出金<span class="sub">需先補到安全網</span></button>
+      <button data-v="later">第二次以後<span class="sub">安全網已守住</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>安全網（出金後餘額需 ≥ 此值）</div>
+    <div class="net">
+      <div class="big" id="netVal"></div>
+      <div class="formula" id="netFormula"></div>
+    </div>
+    <div class="net-tag" id="netTag"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>計算結果</div>
+    <div class="grid">
+      <div class="stat hl span2">
+        <div class="k">所需總利潤（總目標）</div>
+        <div class="v" id="r-required"></div>
+        <div class="u" id="r-required-u"></div>
+      </div>
+      <div class="stat">
+        <div class="k">每天下限</div>
+        <div class="v" id="r-floor"></div>
+        <div class="u">總目標 ÷ 天數</div>
+      </div>
+      <div class="stat">
+        <div class="k">每天上限</div>
+        <div class="v" id="r-cap"></div>
+        <div class="u" id="r-cap-u"></div>
+      </div>
+      <div class="stat pay span2" id="payCard">
+        <div class="k">可出金金額（套用所有限制）</div>
+        <div class="v" id="r-pay"></div>
+        <div class="u" id="r-pay-u"></div>
+      </div>
+      <div class="stat cap">
+        <div class="k">單次出金上限</div>
+        <div class="v" id="r-maxpay"></div>
+        <div class="u" id="r-maxpay-u"></div>
+      </div>
+      <div class="stat">
+        <div class="k">安全網缺口</div>
+        <div class="v" id="r-gap"></div>
+        <div class="u" id="r-gap-u"></div>
+      </div>
+      <div class="stat">
+        <div class="k">MNQ ticks</div>
+        <div class="v" id="r-ticks"></div>
+        <div class="u">可出金 ÷ 2</div>
+      </div>
+      <div class="stat">
+        <div class="k">MNQ 點數</div>
+        <div class="v" id="r-points"></div>
+        <div class="u">可出金 ÷ 20</div>
+      </div>
+    </div>
+    <div class="note" id="payNote" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="simhead">
+      <div class="card-t" style="margin-bottom:0"><span class="dot"></span>逐日模擬</div>
+      <button class="reset" id="resetDays">平均分配</button>
+    </div>
+    <div id="days"></div>
+    <div class="total">
+      <div class="l">累積獲利 <span id="t-status"></span></div>
+      <div class="r"><span id="t-sum"></span> <small style="color:var(--dim);font-weight:500">/ <span id="t-target"></span></small></div>
+    </div>
+    <div id="t-badge"></div>
+  </div>
+
+  <details>
+    <summary>Lucid 官方規則對照表</summary>
+    <div class="body">
+      <b>MLL 安全水位 ＆ 單次出金上限</b>
+      <table>
+        <tr><th>帳戶</th><th>MLL</th><th>FLEX 上限</th><th>PRO 第1次</th><th>PRO 第2次+</th><th>最低日獲利</th></tr>
+        <tr><td>25K</td><td>1,000</td><td>1,000</td><td>1,000</td><td>1,500</td><td>100</td></tr>
+        <tr><td>50K</td><td>2,000</td><td>2,000</td><td>2,000</td><td>2,500</td><td>150</td></tr>
+        <tr><td>100K</td><td>3,000</td><td>2,500</td><td>2,500</td><td>3,000</td><td>200</td></tr>
+        <tr><td>150K</td><td>4,500</td><td>3,000</td><td>3,000</td><td>3,500</td><td>250</td></tr>
+      </table>
+      <b>安全網</b><br>
+      ・PRO：帳戶規模 ＋ MLL ＋ 100（官方需維持 MLL+100 緩衝）<br>
+      ・FLEX：官方<b>無</b> buffer 要求；此安全網為個人風控（鎖定MLL ＋ 想保留血條）<br><br>
+      <b>所需總利潤</b>（本次出金週期要賺的）<br>
+      ・PRO 第一次：安全網缺口 ＋ 出金額；第二次起：出金額<br>
+      ・FLEX 第一次：從零累積、只提 50%，需 max(安全網缺口＋出金, 出金×2)<br>
+      ・FLEX 第二次起：上次留存的 50% 利潤墊著，只需再賺 = 出金額<br><br>
+      <b>可出金金額</b> ＝ min(想出金額, 單次出金上限)，達標後單次實際可提<br>
+      ・PRO 出金上限分第1次/第2次；FLEX 固定上限<br>
+      ・超過上限需分次提領<br><br>
+      <b>MNQ 換算</b>：可出金金額 ÷ 2 ＝ ticks、÷ 20 ＝ 點數<br><br>
+      <b>數據來源</b>：官方 help center 為登入制無法直讀，以上為第三方彙整（spicyfutures／tradetanto）交叉比對，50K 與你提供之數值一致。實際以 Lucid 官方條款為準，如有更新請告知我修正。
+    </div>
+  </details>
+
+  <div class="foot">本工具僅供出金規劃試算，實際規則以 Lucid Trading 官方條款為準。</div>
+
+<script>
+const DATA = {
+  25000:  { mll:1000, payPro:[1000,1500], payFlex:1000, minDaily:100 },
+  50000:  { mll:2000, payPro:[2000,2500], payFlex:2000, minDaily:150 },
+  100000: { mll:3000, payPro:[2500,3000], payFlex:2500, minDaily:200 },
+  150000: { mll:4500, payPro:[3000,3500], payFlex:3000, minDaily:250 }
+};
+const S = {
+  mode:'PRO', stage:'first',
+  accountSize:50000, buffer:2000, withdraw:2000, days:5, consistency:40,
+  dayProfits:[]
+};
+const LIM = { buffer:[0,100000], withdraw:[500,500000], days:[1,60], consistency:[5,100] };
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const D = () => DATA[S.accountSize];
+
+function safetyNet(){ return S.accountSize + S.buffer + 100; }
+function gap(){ return S.stage==='first' ? (safetyNet()-S.accountSize) : 0; }
+function requiredProfit(){
+  const base = gap() + S.withdraw;
+  // FLEX 只在「第一次」需從零累積到 2× 出金（提 50%）；第二次起上次留存的 50% 墊著，只需再賺出金額
+  if(S.mode==='FLEX' && S.stage==='first') return Math.max(base, S.withdraw/payoutRatio());
+  return base;
+}
+function dailyFloor(){ return requiredProfit()/S.days; }
+function dailyCap(){ return S.mode==='PRO' ? requiredProfit()*S.consistency/100 : null; }
+function payoutRatio(){ return S.mode==='FLEX' ? 0.5 : 1; }
+function payoutCap(){
+  const d=D(); if(!d) return Infinity;
+  return S.mode==='FLEX' ? d.payFlex : (S.stage==='first'? d.payPro[0] : d.payPro[1]);
+}
+function withdrawable(){ return Math.min(S.withdraw, payoutCap()); }
+
+function syncDays(){
+  const n=S.days;
+  if(S.dayProfits.length>n) S.dayProfits.length=n;
+  while(S.dayProfits.length<n) S.dayProfits.push(Math.round(dailyFloor()));
+}
+function resetDays(){
+  const avg=Math.round(dailyFloor());
+  S.dayProfits=Array.from({length:S.days},()=>avg);
+  render();
+}
+
+function render(){
+  const d=D();
+  document.getElementById('row-consistency').classList.toggle('dim', S.mode==='FLEX');
+
+  // chips + 官方資訊
+  document.querySelectorAll('#sizeChips button').forEach(b=>
+    b.classList.toggle('on', +b.dataset.s===S.accountSize));
+  const cap=payoutCap();
+  document.getElementById('acctInfo').innerHTML =
+    '<div class="pill"><div class="k">MLL 回撤</div><div class="v">$'+fmt(d.mll)+'</div></div>'+
+    '<div class="pill"><div class="k">單次出金上限</div><div class="v">$'+fmt(cap)+'</div></div>'+
+    '<div class="pill"><div class="k">最低日獲利</div><div class="v">$'+fmt(d.minDaily)+'</div></div>';
+
+  // 參數
+  document.getElementById('v-buffer').innerHTML = fmt(S.buffer);
+  const inW=document.getElementById('in-withdraw');
+  if(document.activeElement!==inW) inW.value=S.withdraw;
+  document.getElementById('v-days').innerHTML = S.days+'<small> 天</small>';
+  document.getElementById('v-consistency').innerHTML = S.consistency+'<small> %</small>';
+  document.getElementById('mll-hint').innerHTML =
+    (S.buffer===d.mll?'官方 MLL $'+fmt(d.mll):'官方 $'+fmt(d.mll)+'（已微調）');
+
+  // 安全網
+  const net=safetyNet();
+  document.getElementById('netVal').innerHTML = '$'+fmt(net);
+  if(S.mode==='PRO'){
+    document.getElementById('netFormula').innerHTML =
+      '帳戶 <b>'+fmt(S.accountSize)+'</b><br>＋ MLL <b>'+fmt(S.buffer)+'</b><br>＋ <b>100</b>';
+    document.getElementById('netTag').innerHTML='PRO 官方需維持 MLL＋100 緩衝。';
+  }else{
+    document.getElementById('netFormula').innerHTML =
+      '鎖定MLL <b>'+fmt(S.accountSize+100)+'</b><br>＋ 想保留 <b>'+fmt(S.buffer)+'</b>';
+    document.getElementById('netTag').innerHTML='FLEX 官方無 buffer 要求，此為個人風控設定。';
+  }
+
+  // 結果
+  const req=requiredProfit();
+  document.getElementById('r-required').innerHTML='$'+fmt(req);
+  let requ;
+  if(S.mode==='FLEX'){
+    if(S.stage==='first'){
+      const base=gap()+S.withdraw, byR=S.withdraw/payoutRatio();
+      requ = byR>base
+        ? '首提從零累積：只提 50%，需賺 2× 出金 = '+fmt(byR)
+        : '補安全網缺口 '+fmt(gap())+' ＋ 出金 '+fmt(S.withdraw);
+    }else{
+      requ = '上次留存 50% 利潤墊著，只需再賺 = 出金額';
+    }
+  }else{
+    requ = S.stage==='first'
+      ? '安全網缺口 '+fmt(gap())+' ＋ 想出金 '+fmt(S.withdraw)
+      : '安全網已守住，等於想出金額';
+  }
+  document.getElementById('r-required-u').innerHTML = requ;
+  document.getElementById('r-floor').innerHTML='$'+fmt(dailyFloor());
+  const dcap=dailyCap();
+  if(dcap===null){
+    document.getElementById('r-cap').innerHTML='不限';
+    document.getElementById('r-cap-u').innerHTML='FLEX 可單天打完';
+  }else{
+    document.getElementById('r-cap').innerHTML='$'+fmt(dcap);
+    document.getElementById('r-cap-u').innerHTML='總目標 × '+S.consistency+'%';
+  }
+
+  // 單次出金上限
+  document.getElementById('r-maxpay').innerHTML='$'+fmt(cap);
+  document.getElementById('r-maxpay-u').innerHTML =
+    S.mode==='FLEX' ? 'FLEX 固定' : (S.stage==='first'?'PRO 第1次':'PRO 第2次+');
+  // 安全網缺口
+  document.getElementById('r-gap').innerHTML='$'+fmt(gap());
+  document.getElementById('r-gap-u').innerHTML = S.stage==='first'?'第1次需補滿':'已守住';
+
+  // 可出金 = min(想出金額, 單次出金上限)
+  const pay=withdrawable();
+  const payCard=document.getElementById('payCard');
+  const payNote=document.getElementById('payNote');
+  payCard.classList.remove('warn');
+  if(pay<500){
+    document.getElementById('r-pay').innerHTML='—';
+    document.getElementById('r-pay-u').innerHTML='未達最低出金 500';
+    payCard.classList.add('warn');
+  }else{
+    document.getElementById('r-pay').innerHTML='$'+fmt(pay);
+    document.getElementById('r-pay-u').innerHTML =
+      pay<S.withdraw-0.5 ? '受單次上限，需分次提' : '達標可一次提滿';
+  }
+  document.getElementById('r-ticks').innerHTML = pay>=500 ? fmt(pay/2) : '—';
+  document.getElementById('r-points').innerHTML = pay>=500 ? fmt(pay/20) : '—';
+
+  if(pay>=500 && pay < S.withdraw-0.5){
+    payNote.style.display='flex';
+    payNote.innerHTML='⚠ 單次最多出 $'+fmt(pay)+'（官方上限）；想提滿 $'+fmt(S.withdraw)+
+      ' 需分 '+Math.ceil(S.withdraw/pay)+' 次提領。';
+  }else{ payNote.style.display='none'; }
+
+  // 逐日
+  syncDays();
+  const dcap2=dailyCap();
+  const wrap=document.getElementById('days');
+  wrap.innerHTML='';
+  let sum=0;
+  S.dayProfits.forEach((p,i)=>{
+    sum+=p;
+    const pct = req>0 ? p/req*100 : 0;
+    const over = S.mode==='PRO' && dcap2!==null && p>dcap2+0.5;
+    const lowFlex = S.mode==='FLEX' && p>0 && p<d.minDaily;
+    const capPct = (S.mode==='PRO'&&dcap2!==null&&req>0)? Math.min(100,dcap2/req*100):null;
+    let tag = over?'超過一致性上限'
+            : lowFlex?('未達日獲利 $'+fmt(d.minDaily))
+            : (S.mode==='PRO'?'安全':'FLEX 不限');
+    let tagCls = over?'':(lowFlex?'warn':'');
+    const el=document.createElement('div');
+    el.className='day';
+    el.innerHTML=
+      '<div class="day-top">'+
+        '<span class="day-name">第'+(i+1)+'天</span>'+
+        '<div class="day-step" data-day="'+i+'">'+
+          '<button data-act="dec">−</button>'+
+          '<div class="dv">'+fmt(p)+'</div>'+
+          '<button data-act="inc">＋</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="day-bar">'+
+        '<div class="fill '+(over?'over':'ok')+'" style="width:'+Math.min(100,Math.max(0,pct))+'%"></div>'+
+        (capPct!==null?'<div class="cap" style="left:'+capPct+'%"></div>':'')+
+      '</div>'+
+      '<div class="day-meta">'+
+        '<span class="pct '+(over?'over':'ok')+'">佔總目標 '+pct.toFixed(0)+'%</span>'+
+        '<span class="tag '+tagCls+'">'+tag+'</span>'+
+      '</div>';
+    wrap.appendChild(el);
+  });
+
+  document.getElementById('t-sum').innerHTML='$'+fmt(sum);
+  document.getElementById('t-target').innerHTML='$'+fmt(req);
+  document.getElementById('t-status').innerHTML='('+(req>0?Math.round(sum/req*100):0)+'%)';
+  const badge=document.getElementById('t-badge');
+  badge.innerHTML = sum>=req-0.5
+    ? '<span class="badge ok">✓ 已達標，可執行出金</span>'
+    : '<span class="badge no">✗ 還差 $'+fmt(req-sum)+' 才達標</span>';
+}
+
+function clamp(key,val){ const [lo,hi]=LIM[key]; return Math.min(hi,Math.max(lo,val)); }
+function step(key,dir,amt){ S[key]=clamp(key, S[key]+dir*amt); render(); }
+
+let holdTimer=null, holdInt=null;
+function bindHold(btn, fn){
+  const start=e=>{ e.preventDefault(); fn();
+    holdTimer=setTimeout(()=>{ holdInt=setInterval(fn,70); },380); };
+  const stop=()=>{ clearTimeout(holdTimer); clearInterval(holdInt); };
+  btn.addEventListener('pointerdown',start);
+  btn.addEventListener('pointerup',stop);
+  btn.addEventListener('pointerleave',stop);
+  btn.addEventListener('pointercancel',stop);
+}
+document.querySelectorAll('.stepper').forEach(st=>{
+  const key=st.dataset.key, amt=+st.dataset.step;
+  st.querySelectorAll('button').forEach(b=>{
+    const dir=b.dataset.act==='inc'?1:-1;
+    bindHold(b,()=>step(key,dir,amt));
+  });
+});
+
+// 想出金額直接輸入
+const inW=document.getElementById('in-withdraw');
+inW.addEventListener('input',()=>{
+  let v=parseInt(inW.value,10); if(isNaN(v)) return;
+  S.withdraw=v; render();
+});
+inW.addEventListener('blur',()=>{
+  S.withdraw=clamp('withdraw', parseInt(inW.value,10)||500);
+  inW.value=S.withdraw; render();
+});
+
+// chips → 自動帶入官方 MLL
+document.getElementById('sizeChips').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.accountSize=+b.dataset.s;
+  S.buffer=DATA[S.accountSize].mll;
+  render();
+});
+document.getElementById('mode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.mode=b.dataset.v;
+  document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+document.getElementById('stage').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.stage=b.dataset.v;
+  document.querySelectorAll('#stage button').forEach(x=>x.classList.toggle('on',x===b));
+  render();
+});
+document.getElementById('days').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  const i=+b.closest('.day-step').dataset.day;
+  const dir=b.dataset.act==='inc'?1:-1;
+  S.dayProfits[i]=Math.max(0, S.dayProfits[i]+dir*100);
+  render();
+});
+document.getElementById('resetDays').addEventListener('click',resetDays);
+
+resetDays();
+</script>
+</body>
+</html>
