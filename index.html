@@ -353,17 +353,27 @@ function withdrawable(){ return Math.min(S.withdraw, payoutCap()); }
 
 // 逐日達標規劃：已完成天數固定、剩餘自動分配、必要時自動加天
 function planDays(){
-  const T = requiredProfit();
-  const cap = S.mode==='PRO' ? requiredProfit()*S.consistency/100 : Infinity;
+  const baseTarget = requiredProfit();
   const rc = S.realizedCount;
-  let R = 0;
-  for(let i=0;i<rc;i++) R += (S.realizedValues[i]||0);
+  let R = 0, maxDay = 0, maxIdx = -1;
+  for(let i=0;i<rc;i++){
+    const v = S.realizedValues[i]||0;
+    R += v;
+    if(v > maxDay){ maxDay = v; maxIdx = i; }
+  }
+  // PRO 一致性自調整：某天獲利超過上限時，上調總目標讓該天佔比壓回一致性%，再重分攤
+  let T = baseTarget, adjustedByDay = -1;
+  if(S.mode==='PRO' && S.consistency>0){
+    const minT = maxDay / (S.consistency/100);
+    if(minT > T + 0.5){ T = minT; adjustedByDay = maxIdx; }
+  }
+  const cap = S.mode==='PRO' ? T*S.consistency/100 : Infinity;
   const remaining = T - R;
   const neededRemaining = remaining>0 ? Math.max(1, Math.ceil(remaining/cap)) : 0;
   const total = Math.max(baseDays(), rc + neededRemaining);
   const unreal = total - rc;
   const suggestion = (unreal>0 && remaining>0) ? remaining/unreal : 0;
-  return {T, cap, R, remaining, total, unreal, suggestion};
+  return {baseTarget, T, cap, R, remaining, total, unreal, suggestion, adjustedByDay};
 }
 
 function render(){
@@ -521,15 +531,18 @@ function render(){
   const ps=document.getElementById('planSummary');
   let html='';
   html += '已實現 <b>'+S.realizedCount+'</b> 天，累積 <b>$'+fmt(plan.R)+'</b>';
+  if(plan.adjustedByDay>=0){
+    html += '<br><span class="add">⚠ 第'+(plan.adjustedByDay+1)+'天獲利超過一致性，總目標自動上調 $'+fmt(plan.baseTarget)+' → <b>$'+fmt(plan.T)+'</b>（讓該天佔比壓回 '+S.consistency+'%）</span>';
+  }
   if(plan.remaining>0.5){
-    html += '；距總目標還差 <b>$'+fmt(plan.remaining)+'</b>';
-    html += '<br>接下來 <b class="big">'+plan.unreal+'</b> 天，每天約 <b class="big">$'+fmt(plan.suggestion)+'</b> 即可達標';
+    html += '<br>距'+(plan.adjustedByDay>=0?'新':'')+'總目標還差 <b>$'+fmt(plan.remaining)+'</b>';
+    html += '；接下來 <b class="big">'+plan.unreal+'</b> 天，每天約 <b class="big">$'+fmt(plan.suggestion)+'</b> 即可達標';
     if(S.mode==='PRO') html += '（單日上限 $'+fmt(plan.cap)+'）';
   }else{
     html += '<br><span class="ok">✓ 已達標，可執行出金</span>';
   }
   if(plan.total > baseDays()){
-    html += '<br><span class="add">⚠ 因前面虧損吃掉一致性額度，天數自動由 '+baseDays()+' 天增為 '+plan.total+' 天</span>';
+    html += '<br><span class="add">⚠ 天數自動由 '+baseDays()+' 天增為 '+plan.total+' 天</span>';
   }
   ps.innerHTML=html;
 }
